@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#fff6de" />
+  <title>リズムゲーム プロトタイプ</title>
+  <style>
+    :root{
+      --bg:#fff6de;--ink:#2e2a25;--paper:#fffdf7;--line:#2e2a25;
+      --accent:#ffca55;--shadow:0 10px 0 rgba(46,42,37,.12);
+      --lane0:#fff09d;--lane1:#ffceb1;--lane2:#ffc0cb;--lane3:#c9e6ff;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
+    body{min-height:100dvh}
+    button{font:inherit;color:inherit}
+    .screen{display:none;min-height:100dvh;padding:max(16px,env(safe-area-inset-top)) 14px max(16px,env(safe-area-inset-bottom))}
+    .screen.active{display:flex}
+    #titleScreen,#resultScreen{align-items:flex-start;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    .card{width:min(100%,520px);background:var(--paper);border:3px solid var(--line);border-radius:28px;padding:24px 18px;box-shadow:var(--shadow);text-align:center;margin:auto 0}
+    .hero h1{margin:8px 0 12px;font-size:clamp(34px,10vw,62px);line-height:.95}
+    .eyebrow{margin:0;font-size:11px;font-weight:800;letter-spacing:.16em;opacity:.55}
+    .lead{margin:0 0 18px;font-weight:700}
+    .section-label{font-weight:900;margin:18px 0 8px}
+    .song-list{display:grid;gap:10px}
+    .song-button{border:2px solid var(--line);border-radius:16px;background:#fff;padding:12px 14px;text-align:left;box-shadow:0 4px 0 var(--line)}
+    .song-button.selected{transform:translateY(2px);box-shadow:0 2px 0 var(--line);background:#fff0a8}
+    .song-button strong{display:block;font-size:17px}.song-button small{opacity:.65}
+    .difficulty-list{display:grid;gap:10px}
+    .difficulty{min-height:62px;border:3px solid var(--line);border-radius:18px;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:0 16px;box-shadow:0 5px 0 var(--line);font-weight:900}
+    .difficulty span{font-size:20px}.difficulty small{font-size:12px;opacity:.62}
+    .difficulty[data-level="easy"]{background:#fff0a9}.difficulty[data-level="normal"]{background:#ffd6b0}.difficulty[data-level="hard"]{background:#ffc0c9}
+    .audio-status{margin:14px 0 0;font-size:12px;opacity:.6}
+    #gameScreen{flex-direction:column;gap:10px;overflow:hidden;height:100dvh}
+    .topbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;width:100%;max-width:760px;margin:0 auto}
+    .text-button{border:0;background:transparent;padding:8px 0;justify-self:start;font-weight:800}
+    .level-label{font-size:12px;font-weight:900;padding:6px 10px;border:2px solid var(--line);border-radius:999px;background:#fff}
+    .score-label{justify-self:end;font-size:22px;font-weight:1000}
+    .now-playing{font-size:12px;opacity:.7;text-align:center}
+    .playfield{position:relative;flex:1;min-height:0;width:100%;max-width:760px;margin:0 auto;border:3px solid var(--line);border-radius:24px;background:#17202a;overflow:hidden}
+    .lanes{position:absolute;inset:0;display:grid}
+    .lanes.cols-1{grid-template-columns:1fr}.lanes.cols-2{grid-template-columns:repeat(2,1fr)}.lanes.cols-4{grid-template-columns:repeat(4,1fr)}
+    .lane{position:relative;border-left:1px solid rgba(255,255,255,.12);border-right:1px solid rgba(255,255,255,.12)}
+    .judge-line{position:absolute;left:0;right:0;bottom:72px;height:5px;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.25),0 0 18px rgba(255,255,255,.8);z-index:3}
+    .note{position:absolute;height:24px;border:3px solid #111;border-radius:12px;box-shadow:0 3px 0 rgba(0,0,0,.45);z-index:4}
+    .note.lane-0{background:var(--lane0)}.note.lane-1{background:var(--lane1)}.note.lane-2{background:var(--lane2)}.note.lane-3{background:var(--lane3)}
+    .judgement{position:absolute;left:50%;top:16%;transform:translateX(-50%);font-size:clamp(28px,8vw,50px);font-weight:1000;color:#fff;text-shadow:0 4px 0 #000;z-index:6}
+    .combo{position:absolute;left:50%;top:27%;transform:translateX(-50%);font-size:18px;font-weight:900;color:#fff;z-index:6}
+    .countdown{position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(70px,22vw,140px);font-weight:1000;color:#fff;text-shadow:0 5px 0 #000;z-index:10;pointer-events:none}
+    .controls{width:100%;max-width:760px;margin:0 auto;display:grid;gap:8px}
+    .controls.cols-1{grid-template-columns:1fr}.controls.cols-2{grid-template-columns:repeat(2,1fr)}.controls.cols-4{grid-template-columns:repeat(4,1fr)}
+    .control-button{min-height:64px;border:3px solid var(--line);border-radius:18px;box-shadow:0 5px 0 var(--line);font-size:clamp(24px,7vw,40px);font-weight:1000;touch-action:none;user-select:none}
+    .control-button:nth-child(1){background:var(--lane0)}.control-button:nth-child(2){background:var(--lane1)}.control-button:nth-child(3){background:var(--lane2)}.control-button:nth-child(4){background:var(--lane3)}
+    .control-button:active,.control-button.pressed{transform:translateY(4px);box-shadow:0 1px 0 var(--line)}
+    .result-card h2{font-size:84px;margin:8px 0 0}.final-score{font-size:32px;font-weight:1000;margin-bottom:16px}
+    .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 18px}
+    .result-grid div{padding:12px 8px;border:2px solid var(--line);border-radius:14px;background:#fff}
+    .result-grid dt{font-size:10px;font-weight:900;opacity:.55}.result-grid dd{margin:4px 0 0;font-size:26px;font-weight:1000}
+    .primary-button,.secondary-button{width:100%;min-height:54px;border:3px solid var(--line);border-radius:16px;font-weight:1000}
+    .primary-button{background:var(--accent);box-shadow:0 5px 0 var(--line)}.secondary-button{margin-top:10px;background:#fff}
+  </style>
+</head>
+<body>
+<main>
+  <section id="titleScreen" class="screen active">
+    <div class="card hero">
+      <p class="eyebrow">MOBILE RHYTHM PROTOTYPE</p>
+      <h1>リズムゲーム<br>プロトタイプ</h1>
+      <p class="lead">上から落ちてくるバーが判定ラインに重なったらタップ！</p>
+      <div class="section-label">1. 曲を選ぶ</div>
+      <div id="songList" class="song-list"></div>
+      <div class="section-label">2. 難易度を選ぶ</div>
+      <div class="difficulty-list">
+        <button class="difficulty" data-level="easy"><span>かんたん</span><small>1レーン</small></button>
+        <button class="difficulty" data-level="normal"><span>ふつう</span><small>2レーン</small></button>
+        <button class="difficulty" data-level="hard"><span>むずかしい</span><small>4レーン</small></button>
+      </div>
+      <p class="audio-status">音は端末内で生成するオリジナル簡易曲です。</p>
+    </div>
+  </section>
+
+  <section id="gameScreen" class="screen">
+    <div class="topbar">
+      <button id="backButton" class="text-button">← もどる</button>
+      <div id="levelLabel" class="level-label"></div>
+      <div id="scoreLabel" class="score-label">0</div>
+    </div>
+    <div id="nowPlaying" class="now-playing"></div>
+    <div id="playfield" class="playfield">
+      <div id="lanes" class="lanes"></div>
+      <div class="judge-line"></div>
+      <div id="countdown" class="countdown"></div>
+      <div id="judgement" class="judgement"></div>
+      <div id="combo" class="combo"></div>
+    </div>
+    <div id="controls" class="controls"></div>
+  </section>
+
+  <section id="resultScreen" class="screen">
+    <div class="card result-card">
+      <p class="eyebrow">RESULT</p>
+      <h2 id="rankLabel">A</h2>
+      <div id="finalScore" class="final-score">0</div>
+      <dl class="result-grid">
+        <div><dt>PERFECT</dt><dd id="perfectCount">0</dd></div>
+        <div><dt>GOOD</dt><dd id="goodCount">0</dd></div>
+        <div><dt>MISS</dt><dd id="missCount">0</dd></div>
+        <div><dt>MAX COMBO</dt><dd id="maxComboCount">0</dd></div>
+      </dl>
+      <button id="retryButton" class="primary-button">もう一度</button>
+      <button id="changeLevelButton" class="secondary-button">曲・難易度を選び直す</button>
+    </div>
+  </section>
+</main>
+
+<script>
+const SONGS={
+  bubbly:{title:'ぷかぷかマーチ',subtitle:'100 BPM・のんびり',bpm:100,beats:32,scale:[261.63,329.63,392,523.25],melody:[0,1,2,1,0,1,3,2,1,2,3,2,0,2,1,0,0,1,2,3,2,1,0,1,2,3,2,1,0,1,0,2]},
+  sparkle:{title:'キラキラステップ',subtitle:'120 BPM・軽快',bpm:120,beats:40,scale:[293.66,369.99,440,587.33],melody:[0,2,1,3,2,1,0,1,2,3,1,2,0,1,2,3,3,2,1,0,1,2,3,1,2,0,1,3,2,1,0,2,3,1,2,0,1,3,2,1]},
+  rush:{title:'どたばたウェーブ',subtitle:'138 BPM・忙しい',bpm:138,beats:48,scale:[220,277.18,329.63,440],melody:[0,1,2,3,2,1,0,2,1,3,2,0,0,2,3,1,3,2,1,0,1,2,0,3,2,3,1,0,0,1,3,2,1,0,2,3,3,1,2,0,2,1,3,0,1,2,1,3]}
+};
+function buildChart(song,lanes,difficulty){
+  const beat=60/song.bpm,leadIn=1.6,notes=[];
+  for(let i=0;i<song.beats;i++){
+    const include=difficulty==='hard'||(difficulty==='easy'?i%2===0:(i%2===0||i%8===3||i%8===7));
+    if(!include) continue;
+    const lane=lanes===1?0:lanes===2?((i+Math.floor(i/4))%2):((i*3+Math.floor(i/2))%4);
+    notes.push({time:leadIn+i*beat,lane});
+    if(difficulty==='hard'&&i%8===6)notes.push({time:leadIn+(i+.5)*beat,lane:(lane+1)%4});
+  }
+  return {notes,duration:leadIn+song.beats*beat+1};
+}
+(()=> {
+  const PERFECT=.09,GOOD=.19,TRAVEL=1.15;
+  const $=s=>document.querySelector(s);
+  const screens={title:$('#titleScreen'),game:$('#gameScreen'),result:$('#resultScreen')};
+  const playfield=$('#playfield'),lanesEl=$('#lanes'),controls=$('#controls'),judgement=$('#judgement'),comboEl=$('#combo'),scoreEl=$('#scoreLabel'),countdown=$('#countdown');
+  let songKey='bubbly',level='easy',song,notes=[],running=false,ctx,startAt=0,raf=0,finishTimer,scheduled=[],score=0,combo=0,maxCombo=0,counts={perfect:0,good:0,miss:0};
+
+  function show(name){Object.values(screens).forEach(x=>x.classList.remove('active'));screens[name].classList.add('active')}
+  function renderSongList(){
+    const host=$('#songList');host.innerHTML='';
+    Object.entries(SONGS).forEach(([k,s])=>{
+      const b=document.createElement('button');b.className='song-button'+(k===songKey?' selected':'');
+      b.innerHTML=`<strong>${s.title}</strong><small>${s.subtitle}</small>`;
+      b.onclick=()=>{songKey=k;renderSongList()};host.appendChild(b);
+    });
+  }
+  function renderLanes(n){
+    lanesEl.innerHTML='';lanesEl.className=`lanes cols-${n}`;
+    for(let i=0;i<n;i++){const d=document.createElement('div');d.className='lane';lanesEl.appendChild(d)}
+    controls.innerHTML='';controls.className=`controls cols-${n}`;
+    const labels=n===1?['●']:n===2?['←','→']:['①','②','③','④'];
+    for(let i=0;i<n;i++){
+      const b=document.createElement('button');b.className='control-button';b.textContent=labels[i];
+      b.onpointerdown=e=>{e.preventDefault();b.classList.add('pressed');pressLane(i)};
+      b.onpointerup=b.onpointercancel=()=>b.classList.remove('pressed');
+      controls.appendChild(b);
+    }
+  }
+  function setup(){
+    song=SONGS[songKey];const laneCount=level==='easy'?1:level==='normal'?2:4;
+    const chart=buildChart(song,laneCount,level);
+    notes=chart.notes.map((n,i)=>({...n,id:i,hit:false,missed:false,el:null}));
+    renderLanes(laneCount);
+    $('#levelLabel').textContent=`${level==='easy'?'かんたん':level==='normal'?'ふつう':'むずかしい'}・${laneCount}レーン`;
+    $('#nowPlaying').textContent=`♪ ${song.title} / ${song.bpm} BPM`;
+    score=combo=maxCombo=0;counts={perfect:0,good:0,miss:0};scoreEl.textContent='0';judgement.textContent='';comboEl.textContent='';
+    return chart.duration;
+  }
+  async function ensureAudio(){if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')await ctx.resume()}
+  function tone(t,f,d=.12,v=.06,type='triangle'){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+d+.02);scheduled.push(o)}
+  function kick(t){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(48,t+.09);g.gain.setValueAtTime(.13,t);g.gain.exponentialRampToValueAtTime(.0001,t+.11);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+.12);scheduled.push(o)}
+  function scheduleSong(){
+    const beat=60/song.bpm,lead=1.6;
+    for(let i=0;i<song.beats;i++){
+      const t=startAt+lead+i*beat;
+      if(i%4===0)kick(t); else if(i%2===0)tone(t,140,.05,.025,'square');
+      tone(t,song.scale[song.melody[i%song.melody.length]],Math.min(.16,beat*.35),.04,'triangle');
+    }
+  }
+  function makeNoteEl(n){
+    const el=document.createElement('div');el.className=`note lane-${n.lane}`;
+    const laneCount=level==='easy'?1:level==='normal'?2:4;
+    const gap=6,leftPct=(n.lane/laneCount)*100,rightPct=((n.lane+1)/laneCount)*100;
+    el.style.left=`calc(${leftPct}% + ${gap}px)`;
+    el.style.width=`calc(${rightPct-leftPct}% - ${gap*2}px)`;
+    el.style.top='-30px';
+    playfield.appendChild(el);n.el=el;
+  }
+  function positionNotes(t){
+    const h=playfield.clientHeight,judgeY=h-72;
+    for(const n of notes){
+      if(n.hit||n.missed){if(n.el){n.el.remove();n.el=null}continue}
+      const dt=n.time-t;
+      if(dt<=TRAVEL && dt>=-GOOD){
+        if(!n.el)makeNoteEl(n);
+        const p=1-(dt/TRAVEL);
+        n.el.style.top=`${-24+p*(judgeY+24)}px`;
+      }else if(dt<-GOOD){
+        n.missed=true;counts.miss++;combo=0;flash('MISS');
+        if(n.el){n.el.remove();n.el=null}
+      }
+    }
+  }
+  function now(){return ctx?ctx.currentTime-startAt:0}
+  function loop(){if(!running)return;positionNotes(now());comboEl.textContent=combo>=2?`${combo} COMBO`:'';raf=requestAnimationFrame(loop)}
+  function pressLane(lane){
+    if(!running)return;const t=now();let best=null,diff=Infinity;
+    for(const n of notes){if(n.hit||n.missed||n.lane!==lane)continue;const d=Math.abs(n.time-t);if(d<diff){diff=d;best=n}}
+    if(!best||diff>GOOD){combo=0;flash('MISS');return}
+    best.hit=true;if(best.el){best.el.remove();best.el=null}
+    combo++;maxCombo=Math.max(maxCombo,combo);
+    if(diff<=PERFECT){counts.perfect++;score+=1000+combo*10;flash('PERFECT!')}
+    else{counts.good++;score+=500+combo*5;flash('GOOD')}
+    scoreEl.textContent=score;
+  }
+  function flash(t){judgement.textContent=t;clearTimeout(flash.t);flash.t=setTimeout(()=>judgement.textContent='',350)}
+  async function startGame(){
+    stopGame();await ensureAudio();const duration=setup();show('game');
+    for(const x of ['3','2','1']){countdown.textContent=x;await new Promise(r=>setTimeout(r,420))}
+    countdown.textContent='GO!';await new Promise(r=>setTimeout(r,250));countdown.textContent='';
+    startAt=ctx.currentTime+.08;running=true;scheduleSong();raf=requestAnimationFrame(loop);finishTimer=setTimeout(finishGame,(duration+.2)*1000);
+  }
+  function stopGame(){running=false;cancelAnimationFrame(raf);clearTimeout(finishTimer);scheduled.forEach(o=>{try{o.stop()}catch{}});scheduled=[];document.querySelectorAll('.note').forEach(x=>x.remove())}
+  function finishGame(){
+    if(!running)return;running=false;cancelAnimationFrame(raf);clearTimeout(finishTimer);
+    notes.forEach(n=>{if(!n.hit&&!n.missed){n.missed=true;counts.miss++};if(n.el)n.el.remove()});
+    const total=counts.perfect+counts.good+counts.miss,rate=total?(counts.perfect+counts.good*.6)/total:0;
+    const rank=rate>=.95?'S':rate>=.82?'A':rate>=.65?'B':rate>=.45?'C':'D';
+    $('#rankLabel').textContent=rank;$('#finalScore').textContent=`${score} pts`;
+    $('#perfectCount').textContent=counts.perfect;$('#goodCount').textContent=counts.good;$('#missCount').textContent=counts.miss;$('#maxComboCount').textContent=maxCombo;
+    show('result');
+  }
+  document.querySelectorAll('.difficulty').forEach(b=>b.onclick=()=>{level=b.dataset.level;startGame()});
+  $('#retryButton').onclick=startGame;$('#changeLevelButton').onclick=()=>{stopGame();show('title')};$('#backButton').onclick=()=>{stopGame();show('title')};
+  renderSongList();
+})();
+</script>
+</body>
+</html>
