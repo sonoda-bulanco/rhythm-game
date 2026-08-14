@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#fff6de" />
+  <title>リズムゲーム プロトタイプ</title>
+  <style>
+:root {
+  --bg: #fff6de;
+  --ink: #2e2a25;
+  --paper: #fffdf7;
+  --line: #2e2a25;
+  --accent: #ffca55;
+  --accent2: #ff8f70;
+  --shadow: 0 10px 0 rgba(46, 42, 37, .12);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; }
+body { min-height: 100dvh; overflow: hidden; }
+button { font: inherit; color: inherit; }
+.app { min-height: 100dvh; }
+.screen { display: none; min-height: 100dvh; padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom)); }
+.screen.active { display: flex; }
+#titleScreen, #resultScreen { align-items: center; justify-content: center; }
+.card { width: min(100%, 520px); background: var(--paper); border: 3px solid var(--line); border-radius: 28px; padding: 28px 22px; box-shadow: var(--shadow); text-align: center; }
+.hero h1 { margin: 8px 0 14px; font-size: clamp(38px, 12vw, 70px); line-height: .95; letter-spacing: -.04em; }
+.eyebrow { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .18em; opacity: .55; }
+.lead { margin: 0 0 24px; font-weight: 700; }
+.difficulty-list { display: grid; gap: 12px; }
+.difficulty { min-height: 70px; border: 3px solid var(--line); border-radius: 20px; background: white; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; box-shadow: 0 5px 0 var(--line); font-weight: 900; }
+.difficulty:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--line); }
+.difficulty span { font-size: 22px; }
+.difficulty small { font-size: 13px; opacity: .6; }
+.difficulty[data-level="easy"] { background: #fff0a9; }
+.difficulty[data-level="normal"] { background: #ffd6b0; }
+.difficulty[data-level="hard"] { background: #ffc0c9; }
+.audio-status { margin: 18px 0 0; min-height: 1.5em; font-size: 12px; opacity: .6; }
+#gameScreen { flex-direction: column; gap: 14px; }
+.topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; max-width: 760px; margin: 0 auto; }
+.text-button { border: 0; background: transparent; padding: 8px 0; justify-self: start; font-weight: 800; }
+.level-label { font-size: 13px; font-weight: 900; padding: 7px 12px; border: 2px solid var(--line); border-radius: 999px; background: white; }
+.score-label { justify-self: end; font-size: 24px; font-weight: 1000; font-variant-numeric: tabular-nums; }
+.stage { position: relative; flex: 1; width: 100%; max-width: 760px; min-height: 260px; margin: 0 auto; border: 3px solid var(--line); border-radius: 28px; background: linear-gradient(#dff7ff 0 58%, #fff2bd 58% 100%); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.stage::after { content:""; position:absolute; left:0; right:0; bottom:24%; height:3px; background:rgba(46,42,37,.2); }
+.character { position: relative; width: 128px; height: 128px; border: 4px solid var(--line); border-radius: 50% 50% 46% 46%; background: white; z-index: 2; transition: transform .09s ease; }
+.character.hit { transform: scale(1.13) rotate(-3deg); }
+.character.miss { animation: shake .2s linear 2; }
+.face { position: absolute; inset: 0; }
+.eye { position: absolute; top: 48px; width: 11px; height: 15px; background: var(--ink); border-radius: 50%; }
+.left-eye { left: 34px; }.right-eye { right: 34px; }
+.mouth { position:absolute; left:50%; top:78px; width:24px; height:12px; transform:translateX(-50%); border-bottom:4px solid var(--ink); border-radius: 0 0 18px 18px; }
+.cue { position:absolute; top:18px; left:50%; transform:translateX(-50%); min-width:72px; min-height:72px; border:3px solid var(--line); border-radius:50%; background:white; display:grid; place-items:center; font-size:34px; font-weight:1000; opacity:.25; transition:.08s; z-index:3; }
+.cue.active { opacity:1; transform:translateX(-50%) scale(1.15); background:#fff0a9; }
+.judgement { position:absolute; top:104px; left:50%; transform:translateX(-50%); font-size: clamp(28px, 9vw, 50px); font-weight:1000; letter-spacing:-.03em; z-index:4; text-shadow: 0 3px 0 white; }
+.combo { position:absolute; bottom:24px; left:50%; transform:translateX(-50%); font-size:18px; font-weight:900; z-index:4; }
+.countdown { position:absolute; inset:0; display:grid; place-items:center; font-size:clamp(70px,22vw,150px); font-weight:1000; z-index:10; pointer-events:none; text-shadow:0 5px 0 white; }
+.controls { width:100%; max-width:760px; margin:0 auto; display:grid; gap:10px; }
+.controls.cols-1 { grid-template-columns:1fr; }
+.controls.cols-2 { grid-template-columns:repeat(2,1fr); }
+.controls.cols-4 { grid-template-columns:repeat(4,1fr); }
+.control-button { min-height: min(20vh, 150px); border:3px solid var(--line); border-radius:24px; box-shadow:0 6px 0 var(--line); font-size:clamp(26px,8vw,46px); font-weight:1000; touch-action:manipulation; user-select:none; }
+.control-button:active, .control-button.pressed { transform:translateY(5px); box-shadow:0 1px 0 var(--line); }
+.control-button[data-lane="0"]{background:#fff09d}.control-button[data-lane="1"]{background:#ffceb1}.control-button[data-lane="2"]{background:#ffc0cb}.control-button[data-lane="3"]{background:#c9e6ff}
+.result-card h2 { font-size:86px; margin:8px 0 0; line-height:1; }
+.final-score { font-size:34px; font-weight:1000; margin-bottom:20px; }
+.result-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 0 20px; }
+.result-grid div { padding:14px 8px; border:2px solid var(--line); border-radius:16px; background:white; }
+.result-grid dt { font-size:11px; font-weight:900; opacity:.55; }.result-grid dd { margin:4px 0 0; font-size:28px; font-weight:1000; }
+.primary-button,.secondary-button { width:100%; min-height:58px; border:3px solid var(--line); border-radius:18px; font-weight:1000; }
+.primary-button { background:var(--accent); box-shadow:0 5px 0 var(--line); }.secondary-button { margin-top:12px; background:white; }
+@keyframes shake { 0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)} }
+@media (max-height: 700px) { .control-button { min-height: 110px; } .stage { min-height: 220px; } .character { width:105px; height:105px; } .eye{top:40px}.mouth{top:64px} }
+
+</style>
+  <style>
+    .song-list{display:grid;gap:10px;margin:22px 0}.song-button{border:2px solid #222;border-radius:18px;background:#fff;padding:14px 16px;text-align:left;box-shadow:0 4px 0 #222}.song-button.selected{transform:translateY(2px);box-shadow:0 2px 0 #222;background:#fff0a8}.song-button strong{display:block;font-size:18px}.song-button small{opacity:.65}.section-label{font-weight:800;margin:20px 0 8px}.now-playing{font-size:13px;opacity:.7;text-align:center;margin-top:10px}.control-button{touch-action:none;-webkit-user-select:none;user-select:none}.stage{min-height:48vh}.hero{max-width:520px}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section id="titleScreen" class="screen active">
+      <div class="card hero">
+        <p class="eyebrow">MOBILE RHYTHM PROTOTYPE</p>
+        <h1>リズムゲーム<br>プロトタイプ</h1>
+        <p class="lead">曲を選んで、合図に合わせてタップ！</p>
+        <div class="section-label">1. 曲を選ぶ</div>
+        <div id="songList" class="song-list"></div>
+        <div class="section-label">2. 難易度を選ぶ</div>
+        <div class="difficulty-list">
+          <button class="difficulty" data-level="easy"><span>かんたん</span><small>1ボタン</small></button>
+          <button class="difficulty" data-level="normal"><span>ふつう</span><small>2ボタン</small></button>
+          <button class="difficulty" data-level="hard"><span>むずかしい</span><small>4ボタン</small></button>
+        </div>
+        <p class="audio-status">音は端末内でリアルタイム生成。外部音源不要です。</p>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen">
+      <div class="topbar">
+        <button id="backButton" class="text-button">← もどる</button>
+        <div id="levelLabel" class="level-label"></div>
+        <div id="scoreLabel" class="score-label">0</div>
+      </div>
+      <div id="nowPlaying" class="now-playing"></div>
+      <div class="stage">
+        <div id="countdown" class="countdown"></div>
+        <div id="character" class="character" aria-hidden="true"><div class="face"><span class="eye left-eye"></span><span class="eye right-eye"></span><span class="mouth"></span></div></div>
+        <div id="cue" class="cue">♪</div>
+        <div id="judgement" class="judgement"></div>
+        <div id="combo" class="combo"></div>
+      </div>
+      <div id="controls" class="controls"></div>
+    </section>
+
+    <section id="resultScreen" class="screen">
+      <div class="card result-card">
+        <p class="eyebrow">RESULT</p><h2 id="rankLabel">A</h2><div id="finalScore" class="final-score">0</div>
+        <dl class="result-grid"><div><dt>PERFECT</dt><dd id="perfectCount">0</dd></div><div><dt>GOOD</dt><dd id="goodCount">0</dd></div><div><dt>MISS</dt><dd id="missCount">0</dd></div><div><dt>MAX COMBO</dt><dd id="maxComboCount">0</dd></div></dl>
+        <button id="retryButton" class="primary-button">もう一度</button><button id="changeLevelButton" class="secondary-button">曲・難易度を選び直す</button>
+      </div>
+    </section>
+  </main>
+  <script>
+// すべてこのプロトタイプ用のオリジナル簡易曲です。
+// 外部音源を使わず Web Audio API で端末内生成します。
+window.RHYTHM_SONGS = {
+  bubbly: {
+    title: 'ぷかぷかマーチ', subtitle: '100 BPM・のんびり跳ねる', bpm: 100, beats: 32,
+    scale: [261.63, 329.63, 392.00, 523.25],
+    melody: [0,1,2,1, 0,1,3,2, 1,2,3,2, 0,2,1,0, 0,1,2,3, 2,1,0,1, 2,3,2,1, 0,1,0,2]
+  },
+  sparkle: {
+    title: 'キラキラステップ', subtitle: '120 BPM・軽快', bpm: 120, beats: 40,
+    scale: [293.66, 369.99, 440.00, 587.33],
+    melody: [0,2,1,3, 2,1,0,1, 2,3,1,2, 0,1,2,3, 3,2,1,0, 1,2,3,1, 2,0,1,3, 2,1,0,2, 3,1,2,0, 1,3,2,1]
+  },
+  rush: {
+    title: 'どたばたウェーブ', subtitle: '138 BPM・忙しい', bpm: 138, beats: 48,
+    scale: [220.00, 277.18, 329.63, 440.00],
+    melody: [0,1,2,3, 2,1,0,2, 1,3,2,0, 0,2,3,1, 3,2,1,0, 1,2,0,3, 2,3,1,0, 0,1,3,2, 1,0,2,3, 3,1,2,0, 2,1,3,0, 1,2,1,3]
+  }
+};
+
+</script>
+<script>
+function buildChart(song, lanes, difficulty) {
+  const beat = 60 / song.bpm;
+  const leadIn = 1.2;
+  const notes = [];
+  const total = song.beats;
+  for (let i = 0; i < total; i++) {
+    let include = false;
+    if (difficulty === 'easy') include = i % 2 === 0;
+    if (difficulty === 'normal') include = i % 2 === 0 || i % 8 === 3 || i % 8 === 7;
+    if (difficulty === 'hard') include = true;
+    if (!include) continue;
+    const lane = lanes === 1 ? 0 : lanes === 2 ? ((i + Math.floor(i / 4)) % 2) : ((i * 3 + Math.floor(i / 2)) % 4);
+    notes.push({ time: leadIn + i * beat, lane });
+    if (difficulty === 'hard' && i % 8 === 6) {
+      notes.push({ time: leadIn + (i + 0.5) * beat, lane: (lane + 1) % 4 });
+    }
+  }
+  return { notes, duration: leadIn + total * beat + 0.8 };
+}
+window.makeRhythmChart = buildChart;
+
+</script>
+<script>
+(() => {
+  const PERFECT = 0.09, GOOD = 0.19, CUE_LEAD = 0.22;
+  const $ = s => document.querySelector(s);
+  const screens = { title: $('#titleScreen'), game: $('#gameScreen'), result: $('#resultScreen') };
+  const controls = $('#controls'), cue = $('#cue'), judgement = $('#judgement'), comboLabel = $('#combo'), scoreLabel = $('#scoreLabel'), levelLabel = $('#levelLabel'), character = $('#character'), countdown = $('#countdown');
+  let level='easy', songKey='bubbly', song=null, notes=[], running=false, raf=0, score=0, combo=0, maxCombo=0, counts={perfect:0,good:0,miss:0}, ctx=null, startAt=0, finishTimer=null, scheduled=[];
+
+  function show(name){Object.values(screens).forEach(s=>s.classList.remove('active'));screens[name].classList.add('active');}
+  function renderSongList(){ const host=$('#songList'); host.innerHTML=''; Object.entries(window.RHYTHM_SONGS).forEach(([key,s])=>{ const b=document.createElement('button'); b.className='song-button'+(key===songKey?' selected':''); b.innerHTML=`<strong>${s.title}</strong><small>${s.subtitle}</small>`; b.onclick=()=>{songKey=key;renderSongList();}; host.appendChild(b); }); }
+  function renderControls(lanes){controls.innerHTML='';controls.className=`controls cols-${lanes}`;const icons=lanes===1?['●']:lanes===2?['←','→']:['①','②','③','④'];for(let i=0;i<lanes;i++){const b=document.createElement('button');b.className='control-button';b.textContent=icons[i];b.onpointerdown=e=>{e.preventDefault();b.classList.add('pressed');pressLane(i)};b.onpointerup=b.onpointercancel=()=>b.classList.remove('pressed');controls.appendChild(b);}}
+  function setup(){ song=window.RHYTHM_SONGS[songKey]; const lanes=level==='easy'?1:level==='normal'?2:4; const c=window.makeRhythmChart(song,lanes,level); notes=c.notes.map((n,i)=>({...n,id:i,hit:false,missed:false})); score=combo=maxCombo=0;counts={perfect:0,good:0,miss:0};scoreLabel.textContent='0';comboLabel.textContent='';judgement.textContent='';levelLabel.textContent=`${level==='easy'?'かんたん':level==='normal'?'ふつう':'むずかしい'}・${lanes}ボタン`;$('#nowPlaying').textContent=`♪ ${song.title} / ${song.bpm} BPM`;renderControls(lanes);return c.duration;}
+  async function ensureAudio(){if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')await ctx.resume();}
+  function tone(time,freq,dur=0.12,vol=0.08,type='sine'){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(0.0001,time);g.gain.exponentialRampToValueAtTime(vol,time+0.008);g.gain.exponentialRampToValueAtTime(0.0001,time+dur);o.connect(g).connect(ctx.destination);o.start(time);o.stop(time+dur+0.02);scheduled.push(o);}
+  function kick(time){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(110,time);o.frequency.exponentialRampToValueAtTime(48,time+0.09);g.gain.setValueAtTime(0.16,time);g.gain.exponentialRampToValueAtTime(0.0001,time+0.11);o.connect(g).connect(ctx.destination);o.start(time);o.stop(time+0.12);scheduled.push(o);}
+  function scheduleSong(){const beat=60/song.bpm, lead=1.2;for(let i=0;i<song.beats;i++){const t=startAt+lead+i*beat;if(i%4===0)kick(t);else if(i%2===0)tone(t,140,0.05,0.035,'square');const freq=song.scale[song.melody[i%song.melody.length]%song.scale.length];tone(t,freq,Math.min(0.18,beat*0.38),0.045,'triangle');if(songKey==='rush'&&i%4===3)tone(t+beat/2,freq*1.5,0.06,0.025,'square');}}
+  async function startGame(){stopGame();await ensureAudio();const duration=setup();show('game');countdown.textContent='3';await sleep(450);countdown.textContent='2';await sleep(450);countdown.textContent='1';await sleep(450);countdown.textContent='GO!';await sleep(250);countdown.textContent='';startAt=ctx.currentTime+0.08;running=true;scheduleSong();raf=requestAnimationFrame(loop);finishTimer=setTimeout(finishGame,(duration+0.2)*1000);}
+  function now(){return ctx?ctx.currentTime-startAt:0;}
+  function loop(){if(!running)return;const t=now();let cueOn=false;for(const n of notes){if(n.hit||n.missed)continue;const d=n.time-t;if(d>=0&&d<=CUE_LEAD)cueOn=true;if(t-n.time>GOOD){n.missed=true;counts.miss++;combo=0;flash('MISS');pulse('miss');}}cue.classList.toggle('active',cueOn);comboLabel.textContent=combo>=2?`${combo} COMBO`:'';raf=requestAnimationFrame(loop);}
+  function pressLane(lane){if(!running)return;const t=now();let best=null,diff=Infinity;for(const n of notes){if(n.hit||n.missed||n.lane!==lane)continue;const d=Math.abs(n.time-t);if(d<diff){diff=d;best=n;}}if(!best||diff>GOOD){combo=0;flash('MISS');pulse('miss');return;}best.hit=true;combo++;maxCombo=Math.max(maxCombo,combo);if(diff<=PERFECT){counts.perfect++;score+=1000+combo*10;flash('PERFECT!')}else{counts.good++;score+=500+combo*5;flash('GOOD')}scoreLabel.textContent=String(score);pulse('hit');}
+  function flash(t){judgement.textContent=t;clearTimeout(flash.t);flash.t=setTimeout(()=>judgement.textContent='',380)}
+  function pulse(c){character.classList.remove('hit','miss');void character.offsetWidth;character.classList.add(c);setTimeout(()=>character.classList.remove(c),200)}
+  function finishGame(){if(!running)return;running=false;cancelAnimationFrame(raf);clearTimeout(finishTimer);notes.forEach(n=>{if(!n.hit&&!n.missed){n.missed=true;counts.miss++;}});const total=counts.perfect+counts.good+counts.miss,rate=total?(counts.perfect+counts.good*.6)/total:0,rank=rate>=.95?'S':rate>=.82?'A':rate>=.65?'B':rate>=.45?'C':'D';$('#rankLabel').textContent=rank;$('#finalScore').textContent=`${score} pts`;$('#perfectCount').textContent=counts.perfect;$('#goodCount').textContent=counts.good;$('#missCount').textContent=counts.miss;$('#maxComboCount').textContent=maxCombo;show('result');}
+  function stopGame(){running=false;cancelAnimationFrame(raf);clearTimeout(finishTimer);scheduled.forEach(o=>{try{o.stop()}catch{}});scheduled=[];}
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  document.querySelectorAll('.difficulty').forEach(b=>b.onclick=()=>{level=b.dataset.level;startGame();});$('#retryButton').onclick=startGame;$('#changeLevelButton').onclick=()=>{stopGame();show('title')};$('#backButton').onclick=()=>{stopGame();show('title')};renderSongList();
+})();
+
+</script>
+</body>
+</html>
