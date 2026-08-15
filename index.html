@@ -21,7 +21,7 @@
     .panel h2 { margin:0 0 12px; font-size:17px; text-align:center; }
     .song { position:relative; width:100%; text-align:left; border-radius:18px; background:#ece6ff; padding:13px 50px 13px 15px; margin:9px 0; box-shadow:0 4px 0 #b2a6dc; transition:.12s transform,.12s background; }
     .song:active,.song.selected { transform:translateY(3px); box-shadow:0 1px 0 #b2a6dc; background:#ffe651; }
-    .song strong { display:block; font-size:18px; } .song small { opacity:.75; font-weight:700; }
+    .song strong { display:block; font-size:18px; } .song small { opacity:.75; font-weight:700; } .song .stars-rating { display:block; margin-top:3px; color:#f5a900; font-size:13px; letter-spacing:1px; text-shadow:none; }
     .song i { position:absolute; right:15px; top:50%; transform:translateY(-50%); font-size:25px; font-style:normal; }
     .difficulty { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
     .difficulty button { border-radius:14px; padding:10px 3px; font-size:13px; font-weight:900; color:#fff; background:#8e82ba; box-shadow:0 4px 0 #5d5384; }
@@ -58,18 +58,19 @@
 <script>
 (() => {
   const tracks = [
-    {title:'THE ENTERTAINER', genre:'S. Joplin · Ragtime · 112 BPM', icon:'🎹', bpm:112, kind:'rag', root:48, melody:[76,75,73,71,72,74,76,72,71,69,68,69,71,72,73,71]},
-    {title:'CAN-CAN', genre:'J. Offenbach · Galop · 142 BPM', icon:'🎪', bpm:142, kind:'galop', root:48, melody:[76,80,76,80,76,80,76,80,75,78,75,78,75,78,75,78,73,76,73,76,73,76,73,76,71,75,71,75,71,75,71,75]},
-    {title:'TURKISH MARCH', genre:'W. A. Mozart · 126 BPM', icon:'🌙', bpm:126, kind:'classic', root:45, melody:[64,66,68,69,71,69,68,66,64,66,68,69,71,69,68,66,71,73,74,76,78,76,74,73]},
-    {title:"SKATERS' WALTZ", genre:'É. Waldteufel · Op.183 · 174 BPM', icon:'⛸️', bpm:174, kind:'skaters', root:47},
-    {title:'WILLIAM TELL', genre:'G. Rossini · Finale · 150 BPM', icon:'🏇', bpm:150, kind:'gallop', root:43, melody:[67,67,67,67,67,67,67,67,69,71,72,71,69,67,69,71,72,71,69,67,64,64,64,64]},
-    {title:'MOUNTAIN KING', genre:'E. Grieg · 132 BPM', icon:'🏔️', bpm:132, kind:'mountain', root:40, melody:[64,65,66,67,68,69,68,67,66,67,68,64,67,66,65,64,64,65,66,67,68,69,70,71]},
-    {title:'ODE TO JOY', genre:'L. van Beethoven · 116 BPM', icon:'🌟', bpm:116, kind:'ode', root:48, melody:[64,64,65,67,67,65,64,62,60,60,62,64,64,62,62,64,64,65,67,67,65,64,62,60,60,62,64,62,60,60]}
+    {title:'TWINKLE TWINKLE', genre:'Traditional · 72 BPM', icon:'✨', bpm:72, kind:'easy', root:48, stars:1, sparse:true, melody:[60,60,67,67,69,69,67,65,65,64,64,62,62,60]},
+    {title:'THE ENTERTAINER', genre:'S. Joplin · Ragtime · 112 BPM', icon:'🎹', bpm:112, kind:'rag', root:48, stars:2, melody:[76,75,73,71,72,74,76,72,71,69,68,69,71,72,73,71]},
+    {title:'CAN-CAN', genre:'J. Offenbach · Galop · 142 BPM', icon:'🎪', bpm:142, kind:'galop', root:48, stars:4, melody:[76,80,76,80,76,80,76,80,75,78,75,78,75,78,75,78,73,76,73,76,73,76,73,76,71,75,71,75,71,75,71,75]},
+    {title:'TURKISH MARCH', genre:'W. A. Mozart · 126 BPM', icon:'🌙', bpm:126, kind:'classic', root:45, stars:3, melody:[64,66,68,69,71,69,68,66,64,66,68,69,71,69,68,66,71,73,74,76,78,76,74,73]},
+    {title:"SKATERS' WALTZ", genre:'É. Waldteufel · Op.183 · 174 BPM', icon:'⛸️', bpm:174, kind:'skaters', root:47, stars:4},
+    {title:'WILLIAM TELL', genre:'G. Rossini · Finale · 150 BPM', icon:'🏇', bpm:150, kind:'gallop', root:43, stars:5, melody:[67,67,67,67,67,67,67,67,69,71,72,71,69,67,69,71,72,71,69,67,64,64,64,64]},
+    {title:'MOUNTAIN KING', genre:'E. Grieg · 132 BPM', icon:'🏔️', bpm:132, kind:'mountain', root:40, stars:4, melody:[64,65,66,67,68,69,68,67,66,67,68,64,67,66,65,64,64,65,66,67,68,69,70,71]},
+    {title:'ODE TO JOY', genre:'L. van Beethoven · 116 BPM', icon:'🌟', bpm:116, kind:'ode', root:48, stars:2, melody:[64,64,65,67,67,65,64,62,60,60,62,64,64,62,62,64,64,65,67,67,65,64,62,60,60,62,64,62,60,60]}
   ];
   const modes = { easy:1, normal:2, hard:4 }; let selectedTrack=0, selectedMode='normal', state, ctx, master, chipWaves;
   const $ = s => document.querySelector(s), screens=['title','game','result'];
   function show(id){ screens.forEach(x=>$('#'+x).classList.toggle('active',x===id)); }
-  function drawSongs(){ $('#songs').innerHTML=tracks.map((t,i)=>`<button class="song ${i===selectedTrack?'selected':''}" data-song="${i}"><strong>${t.title}</strong><small>${t.genre}</small><i>${t.icon}</i></button>`).join(''); }
+  function drawSongs(){ $('#songs').innerHTML=tracks.map((t,i)=>`<button class="song ${i===selectedTrack?'selected':''}" data-song="${i}"><strong>${t.title}</strong><small>${t.genre}</small><span class="stars-rating">${'★'.repeat(t.stars)}${'☆'.repeat(5-t.stars)}</span><i>${t.icon}</i></button>`).join(''); }
   drawSongs();
   $('#songs').onclick=e=>{const b=e.target.closest('[data-song]');if(b){selectedTrack=+b.dataset.song;drawSongs();}};
   $('#difficulties').onclick=e=>{const b=e.target.closest('[data-d]');if(b){selectedMode=b.dataset.d;[...$('#difficulties').children].forEach(x=>x.classList.toggle('selected',x===b));}};
@@ -84,7 +85,7 @@
   function scratch(time){const length=.15, source=ctx.createBufferSource(), buffer=ctx.createBuffer(1,ctx.sampleRate*length,ctx.sampleRate),data=buffer.getChannelData(0),filter=ctx.createBiquadFilter(),gain=ctx.createGain();for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*(1-i/data.length*.5);source.buffer=buffer;filter.type='bandpass';filter.Q.value=7;filter.frequency.setValueAtTime(1700,time);filter.frequency.exponentialRampToValueAtTime(380,time+length);gain.gain.setValueAtTime(.001,time);gain.gain.linearRampToValueAtTime(.13,time+.012);gain.gain.exponentialRampToValueAtTime(.001,time+length);source.connect(filter).connect(gain).connect(master);source.start(time);}
   function toneForLane(lane,time){const t=tracks[selectedTrack], scale=t.kind==='hiphop'?[0,3,5,7,10]:t.kind==='techno'?[0,3,7,10]:[0,4,7,9]; const f=midi(t.root+12+scale[lane%scale.length]);pulse(f,time,.15,.1,true);}
   function playSongMelody(time,beat){const melody=state.track.melody;if(!melody)return;const note=melody[Math.floor(beat)%melody.length];pulse(midi(note),time,.32,.11,true);}
-  function makeChart(){const lanes=modes[selectedMode], t=tracks[selectedTrack], beats=64, out=[];for(let b=2;b<beats;b+=.5){let use = b%4===0 || Math.random()<(t.kind==='techno'?.48:.34); if(use){let lane=(Math.floor(b*2+(b%3))%lanes);out.push({beat:b,lane}); if(lanes===4&&b%8===6)out.push({beat:b,lane:(lane+2)%lanes});}}return out.sort((a,b)=>a.beat-b.beat);}
+  function makeChart(){const lanes=modes[selectedMode], t=tracks[selectedTrack], beats=64, out=[];for(let b=2;b<beats;b+=.5){let use=t.sparse?b%4===0:(b%4===0 || Math.random()<(t.kind==='techno'?.48:.34)); if(use){let lane=(Math.floor(b*2+(b%3))%lanes);out.push({beat:b,lane}); if(!t.sparse&&lanes===4&&b%8===6)out.push({beat:b,lane:(lane+2)%lanes});}}return out.sort((a,b)=>a.beat-b.beat);}
   function start(){audio(); const track=tracks[selectedTrack], lanes=modes[selectedMode], chart=makeChart(), now=ctx.currentTime+.18; state={track,lanes,chart,start:now,ended:false,score:0,combo:0,maxCombo:0,perfect:0,miss:0,gauge:40,lastBeat:-1}; $('#songLabel').innerHTML=`<small>${track.genre}</small>${track.title}`;$('#score').textContent='000000';$('#combo').textContent='0';update();$('#lanes').innerHTML=Array.from({length:lanes},()=>'<div class="lane"></div>').join('');$('#keys').innerHTML=Array.from({length:lanes},(_,i)=>`<button class="key" data-lane="${i}">${['●','◆','★','✦'][i]}</button>`).join('');show('game'); requestAnimationFrame(frame); }
   function playBacking(beat){
     const s=state,t=ctx.currentTime,step=Math.floor(beat*2); if(step===s.lastBeat)return; s.lastBeat=step;
@@ -117,8 +118,9 @@
   function miss(){if(!state||state.ended)return;state.combo=0;state.miss++;state.gauge=Math.max(0,state.gauge-9);flash('MISS…');update();if(state.gauge===0)end(true);}
   function flash(text){let j=$('#judge');j.textContent=text;j.classList.remove('show');void j.offsetWidth;j.classList.add('show');}
   function comboBurst(){const field=$('.playfield');field.classList.remove('combo-burst');void field.offsetWidth;field.classList.add('combo-burst');flash(`★ ${state.combo} COMBO! ★`);[0,4,7].forEach((n,i)=>pulse(midi(72+n),ctx.currentTime+i*.05,.12,.06,true));}
+  function outcomeSound(cleared){const notes=cleared?[72,76,79,84]:[64,59,52];notes.forEach((n,i)=>pulse(midi(n),ctx.currentTime+i*(cleared ? .09 : .14),cleared ? .16 : .24,.08,cleared));}
   function update(){$('#score').textContent=String(state.score).padStart(6,'0');$('#combo').textContent=state.combo;$('#gaugeFill').style.width=state.gauge+'%';$('#gaugeText').textContent=state.gauge+'%';$('#gaugeFill').style.background=state.gauge<25?'#ff4f8c':'linear-gradient(90deg,#ff5f93,#ffe651,#42d9d0)';}
-  function end(gameOver=false){if(!state||state.ended)return;state.ended=true;const cleared=!gameOver&&state.gauge>=70;let ratio=state.score/Math.max(1,state.chart.length*1000);$('#resultTitle').textContent=cleared?'CLEAR!':'FAILED…';$('#resultTitle').classList.toggle('failed',!cleared);$('#rank').textContent=cleared?(ratio>.82?'S':ratio>.62?'A':ratio>.4?'B':'C'):'×';$('#resultSong').textContent=state.track.title;$('#clearNote').textContent=cleared?`GROOVE ${state.gauge}% — CLEAR LINE 70%`:(gameOver?'GROOVEが0%になりました':'GROOVE 70%でCLEARです');$('#resultScore').textContent=String(state.score).padStart(6,'0');$('#resultCombo').textContent=state.maxCombo;$('#perfects').textContent=state.perfect;$('#misses').textContent=state.miss;show('result');}
+  function end(gameOver=false){if(!state||state.ended)return;state.ended=true;const cleared=!gameOver&&state.gauge>=70;outcomeSound(cleared);let ratio=state.score/Math.max(1,state.chart.length*1000);$('#resultTitle').textContent=cleared?'CLEAR!':'FAILED…';$('#resultTitle').classList.toggle('failed',!cleared);$('#rank').textContent=cleared?(ratio>.82?'S':ratio>.62?'A':ratio>.4?'B':'C'):'×';$('#resultSong').textContent=state.track.title;$('#clearNote').textContent=cleared?`GROOVE ${state.gauge}% — CLEAR LINE 70%`:(gameOver?'GROOVEが0%になりました':'GROOVE 70%でCLEARです');$('#resultScore').textContent=String(state.score).padStart(6,'0');$('#resultCombo').textContent=state.maxCombo;$('#perfects').textContent=state.perfect;$('#misses').textContent=state.miss;show('result');}
   function selectDifficulty(mode){selectedMode=mode;[...$('#difficulties').children].forEach(x=>x.classList.toggle('selected',x.dataset.d===mode));}
   $('#start').onclick=start;$('#again').onclick=start;$('#selectMenu').onclick=()=>show('title');$('#keys').addEventListener('pointerdown',e=>{let b=e.target.closest('[data-lane]');if(!b)return;b.classList.add('hit');setTimeout(()=>b.classList.remove('hit'),90);judge(+b.dataset.lane);});$('#pause').onclick=()=>{if(state&&!state.ended)end();};
   addEventListener('keydown',e=>{
